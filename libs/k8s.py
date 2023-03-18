@@ -38,6 +38,8 @@ class K8sClient:
             raise MyValidationError(message="请求链接错误", code=10000)
         except ApiException as e:
             raise MyValidationError(message=e.body, code=10001)
+        except Exception as e:
+            raise MyValidationError(message=str(e), code=20000)
         return res
 
     def create_namespace_by_yaml(self):
@@ -49,6 +51,8 @@ class K8sClient:
             raise MyValidationError(message="请求链接错误", code=10000)
         except ApiException as e:
             raise MyValidationError(message=e.body, code=10002)
+        except Exception as e:
+            raise MyValidationError(message=str(e), code=20000)
         return res
 
     def list_namespace(self, limit="10", start=""):
@@ -82,6 +86,8 @@ class K8sClient:
         # 业务逻辑错误
         except ApiException as e:
             raise MyValidationError(message=e.body, code=10003)
+        except Exception as e:
+            raise MyValidationError(message=str(e), code=20000)
 
     def delete_namespace(self, name=""):
         if not name:
@@ -93,6 +99,8 @@ class K8sClient:
             raise MyValidationError(message="请求链接错误", code=10000)
         except ApiException as e:
             raise MyValidationError(message=e.body, code=10004)
+        except Exception as e:
+            raise MyValidationError(message=str(e), code=20000)
         return res
 
     def read_namespace(self, name=""):
@@ -104,7 +112,46 @@ class K8sClient:
             raise MyValidationError(message="请求链接错误", code=10000)
         except ApiException as e:
             raise MyValidationError(message=e.body, code=10005)
+        except Exception as e:
+            raise MyValidationError(message=str(e), code=20000)
         return res
+
+    # 查看某个namespace下面的事件列表
+    def list_namespaced_event(self, limit="10", start="", namespace="default"):
+        """
+        :param limit: 没次请求返回的个数
+        :param start: 从上次请求的位置开始，类似mysql的offset功能
+        :return: 返回查询数据以及当次请求的截止位置标记_continue的值
+        """
+        if not namespace:
+            raise MyValidationError(message="参数错误", code=10001)
+        kwargs = dict()
+        kwargs["limit"] = limit
+        if start:
+            kwargs["_continue"] = start
+
+        try:
+            res = self.core_v1_api.list_namespaced_event(namespace=namespace, **kwargs)
+            result = []
+            for item in res.items:
+                data = dict()
+                data["name"] = item.metadata.name  # 事件名字
+                data["reason"] = item.reason  # 发生原因
+                data["message"] = item.message  # 事件详情
+                data["source"] = str(item.source)  # 事件来源
+                data["count"] = item.count  # 发生次数
+                data["first_timestamp"] = item.first_timestamp  # 第一次发生时间
+                data["last_timestamp"] = item.last_timestamp  # 最后一次发生时间
+                result.append(data)
+            # 用来实现分页查询的类似offset标记
+            _continue = res.metadata._continue if res.metadata._continue else None
+            return result, _continue
+        except RequestError as e:
+            raise MyValidationError(message=f"请求链接错误:{e.__dict__}", code=10000)
+        except ApiException as e:
+            raise MyValidationError(message=e.body, code=10005)
+        except Exception as e:
+            raise MyValidationError(message=str(e), code=20000)
 
 
 k8s_client = K8sClient()
