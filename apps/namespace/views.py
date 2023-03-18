@@ -12,6 +12,7 @@ from common.response import MyResponse as Response
 
 class NameSpaceViewSet(mixins.ListModelMixin,
                        mixins.RetrieveModelMixin,
+                       mixins.DestroyModelMixin,
                        viewsets.GenericViewSet):
     authentication_classes = []
 
@@ -31,3 +32,8 @@ class NameSpaceViewSet(mixins.ListModelMixin,
         ns_name = self.kwargs.get(self.lookup_field, "")
         data = k8s_client.read_namespace(ns_name)
         return Response(data)
+
+    def destroy(self, request, *args, **kwargs):
+        ns_name = self.kwargs.get(self.lookup_field, "")
+        data = k8s_client.delete_namespace(ns_name)
+        return Response(status=data)

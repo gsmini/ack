@@ -93,7 +93,8 @@ class K8sClient:
         if not name:
             raise MyValidationError(message="参数错误", code=10001)
         try:
-            res = self.core_v1_api.delete_namespace(name=name)
+            self.core_v1_api.delete_namespace(name=name)
+            return None
             # todo处理自己的数据逻辑
         except RequestError as e:
             raise MyValidationError(message="请求链接错误", code=10000)
@@ -101,7 +102,6 @@ class K8sClient:
             raise MyValidationError(message=e.body, code=10004)
         except Exception as e:
             raise MyValidationError(message=str(e), code=20000)
-        return res
 
     def read_namespace(self, name=""):
         if not name:
@@ -120,7 +120,6 @@ class K8sClient:
             raise MyValidationError(message=e.body, code=10005)
         except Exception as e:
             raise MyValidationError(message=str(e), code=20000)
-        return res
 
     # 查看某个namespace下面的事件列表
     def list_namespaced_event(self, limit="10", start="", namespace="default"):
