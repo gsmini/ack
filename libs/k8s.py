@@ -108,6 +108,12 @@ class K8sClient:
             raise MyValidationError(message="参数错误", code=10001)
         try:
             res = self.core_v1_api.read_namespace(name=name)
+            data = dict()
+            data["name"] = res.metadata.name
+            data["creation_timestamp"] = res.metadata.creation_timestamp
+            data["uid"] = res.metadata.uid
+            data["labels"] = res.metadata.labels
+            return data
         except RequestError as e:
             raise MyValidationError(message="请求链接错误", code=10000)
         except ApiException as e:

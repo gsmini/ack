@@ -7,6 +7,7 @@ from common.response import MyResponse as Response
 class EventViewSet(mixins.CreateModelMixin,
                    mixins.UpdateModelMixin,
                    mixins.ListModelMixin,
+                   mixins.RetrieveModelMixin,
                    viewsets.GenericViewSet):
     authentication_classes = []
 
@@ -20,3 +21,4 @@ class EventViewSet(mixins.CreateModelMixin,
         resp['data'] = data
         resp['_continue'] = _continue
         return Response(resp)
+
