@@ -6,5 +6,5 @@ class MyResponse(Response):
                  template_name=None, headers=None,
                  exception=False, content_type=None):
         print(status)
-        data = {"code": 200, "status": "success", "message": "获取数据成功", 'data': data}
+        data = {"code": 200, "status": "success", "message": "获取数据成功", 'data': data, "detail": ""}
         super().__init__(data=data, status=200, template_name=None, headers=None, exception=False, content_type=None)

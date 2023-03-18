@@ -14,11 +14,13 @@ env.read_env(os.path.join(BASE_DIR, '.env'))
 SECRET_KEY = env.str('SECRET_KEY')
 
 DEBUG = env.bool('DEBUG')
+KUBE_CONFIG = os.path.join(BASE_DIR, ".kube.config")
 # 用.evn方式来读取配置文件,把.env放在.gitignore中,线上的.env中的配置是正式环境相关配置．
+ALLOWED_HOSTS_STR = env.str('ALLOWED_HOSTS')
 if DEBUG:
     ALLOWED_HOSTS = ["*"]
 else:
-    ALLOWED_HOSTS = ["gsmini.cn"]
+    ALLOWED_HOSTS = ALLOWED_HOSTS_STR.split(",")
 
 SECRET_KEY = '6okdaz$3=1w_4i!-r!#6wh-e!8%3v75a4j+^xm09s2&4#)40#i'
 
