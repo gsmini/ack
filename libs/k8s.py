@@ -25,7 +25,7 @@ class K8sClient:
         self.api_client = client.ApiClient()  # 底层的apiclient
         # 各个资源操作对象需要声明不同的client，具体看github readme.md中的文档即可，可做工具书查询。
         self.core_v1_api = client.CoreV1Api(self.api_client)
-        self.client_apps = client.AppsV1Api(self.api_client)
+        self.apps_client = client.AppsV1Api(self.api_client)
         # self.client_networking = client.NetworkingApi(self.v1client)
 
     def create_namespace(self, name=""):
@@ -55,7 +55,7 @@ class K8sClient:
             raise MyValidationError(message=str(e), code=20000)
         return res
 
-    def list_namespace(self, limit="10", start=""):
+    def list_namespace(self, limit=10, start=""):
         """
 
         :param limit: 没次请求返回的个数
@@ -122,8 +122,9 @@ class K8sClient:
             raise MyValidationError(message=str(e), code=20000)
 
     # 查看某个namespace下面的事件列表
-    def list_namespaced_event(self, limit="10", start="", namespace="default"):
+    def list_namespaced_event(self, limit=10, start="", namespace=""):
         """
+        :param namespace: 命名空间的名字
         :param limit: 没次请求返回的个数
         :param start: 从上次请求的位置开始，类似mysql的offset功能
         :return: 返回查询数据以及当次请求的截止位置标记_continue的值
@@ -147,6 +148,38 @@ class K8sClient:
                 data["count"] = item.count  # 发生次数
                 data["first_timestamp"] = item.first_timestamp  # 第一次发生时间
                 data["last_timestamp"] = item.last_timestamp  # 最后一次发生时间
+                result.append(data)
+            # 用来实现分页查询的类似offset标记
+            _continue = res.metadata._continue if res.metadata._continue else None
+            return result, _continue
+        except RequestError as e:
+            raise MyValidationError(message=f"请求链接错误:{e.__dict__}", code=10000)
+        except ApiException as e:
+            raise MyValidationError(message=e.body, code=10005)
+        except Exception as e:
+            raise MyValidationError(message=str(e), code=20000)
+
+    def list_deployment_for_all_namespaces(self, limit=10, start=""):
+        kwargs = dict()
+        kwargs["limit"] = limit
+        if start:
+            kwargs["_continue"] = start
+        try:
+            res = self.apps_client.list_deployment_for_all_namespaces(**kwargs)
+            result = []
+            for item in res.items:
+                data = dict()
+                images = []  # 一个pod会有多个image
+                for image in item.spec.template.spec.containers:
+                    images.append({"image_name": image.image})
+                data["name"] = item.metadata.name
+                data["creation_timestamp"] = item.metadata.creation_timestamp
+                data["image"] = images
+                data["labels"] = item.metadata.labels
+                data["replicas"] = item.status.replicas
+                data["unavailable_replicas"] = item.status.unavailable_replicas if \
+                    item.status.unavailable_replicas else 0
+
                 result.append(data)
             # 用来实现分页查询的类似offset标记
             _continue = res.metadata._continue if res.metadata._continue else None
