@@ -19,5 +19,11 @@ class NodeViewSet(mixins.CreateModelMixin,
     permission_classes = []
 
     def list(self, request, *args, **kwargs):
-        data = k8s_client.list_namespace()
-        return Response(data)
+        resp = dict()
+        limit = self.request.query_params.get("limit", "10")
+        start = self.request.query_params.get("start", "")
+        data, _continue = k8s_client.list_namespace(limit, start)
+        resp['data'] = data
+        resp['_continue'] = _continue
+
+        return Response(resp)

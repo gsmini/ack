@@ -187,7 +187,8 @@ else:
     STATIC_ROOT = 'staticfiles'
 
 STATIC_URL = '/static/'
-
+# k8s客户端请求超时时间
+K8S_TIMEOUT = env.int("K8S_TIMEOUT", 3)
 # 阿里云oss配置
 # 阿里云OSS配置信息
 PREFIX = env.str('PREFIX')

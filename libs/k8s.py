@@ -51,9 +51,20 @@ class K8sClient:
             raise MyValidationError(message=e.body, code=10002)
         return res
 
-    def list_namespace(self, limit=10):
+    def list_namespace(self, limit="10", start=""):
+        """
+
+        :param limit: 没次请求返回的个数
+        :param start: 从上次请求的位置开始，类似mysql的offset功能
+        :return: 返回查询数据以及当次请求的截止位置标记_continue的值
+        """
+
+        kwargs = dict()
+        kwargs["limit"] = limit
+        if start:
+            kwargs["_continue"] = start
         try:
-            res = self.core_v1_api.list_namespace(limit=limit)
+            res = self.core_v1_api.list_namespace(**kwargs)
             result = []
             for item in res.items:
                 data = dict()
@@ -62,9 +73,13 @@ class K8sClient:
                 data["creation_timestamp"] = item.metadata.creation_timestamp
                 data["labels"] = item.metadata.labels
                 result.append(data)
-            return result
+            # 用来实现分页查询的类似offset标记
+            _continue = res.metadata._continue if res.metadata._continue else None
+            return result, _continue
+        # 请求不通
         except RequestError as e:
             raise MyValidationError(message="请求链接错误", code=10000)
+        # 业务逻辑错误
         except ApiException as e:
             raise MyValidationError(message=e.body, code=10003)
 
