@@ -1,6 +1,6 @@
 import pprint
 
-from kubernetes import client, config
+from kubernetes import client, config, utils
 import yaml
 
 from common.validate import MyValidationError
@@ -267,8 +267,8 @@ class K8sClient:
             raise MyValidationError(message="参数错误", code=10001)
         try:
             res = self.apps_client.read_namespaced_deployment(name=name, namespace=namespace)
+
             data = dict()
-            pprint.pprint(res)
 
             data["metadata"] = {
                 "name": res.metadata.name,
@@ -300,6 +300,205 @@ class K8sClient:
             data["status"] = [condition.to_dict() for condition in res.status.conditions]
 
             return data
+        except RequestError as e:
+            raise MyValidationError(message=f"请求链接错误:{e.__dict__}", code=10000)
+        except ApiException as e:
+            raise MyValidationError(message=e.body, code=10005)
+        except Exception as e:
+            raise MyValidationError(message=str(e), code=20000)
+
+    # 查看pod列表 必须带namespace
+    def list_namespaced_pod(self, limit=10, start="", namespace=""):
+        if not namespace:
+            raise MyValidationError(message="参数错误", code=10001)
+        kwargs = dict()
+        kwargs["limit"] = limit
+        if start:
+            kwargs["_continue"] = start
+        try:
+            res = self.core_v1_api.list_namespaced_pod(namespace, **kwargs)
+            result = []
+            for item in res.items:
+                data = dict()
+                data["name"] = item.metadata.name  # 名字
+                data["namespace"] = item.metadata.namespace  # 命名空间
+                data["creation_timestamp"] = item.metadata.creation_timestamp  # 创建时间
+                data["node_name"] = item.spec.node_name  # 节点名字
+                data["labels"] = item.metadata.labels  # 标签
+                data["images"] = [container.image for container in item.spec.containers]  # pod内的镜像
+                # 里面会有很多image 所以我做成一个list展示每个container的状态信息
+                containers_data = []
+                for container in item.status.container_statuses:
+                    status = ""
+                    reason = ""
+                    state_dict = container.state.to_dict()
+                    for key in state_dict.keys():
+                        if state_dict.get(key):
+                            status = key
+                            reason = state_dict.get(key)
+                    containers_data.append({
+                        "image": container.image,  # 镜像名字
+                        "restart_count": container.restart_count,  # 重启次数
+                        "status": status,  # 当前状态
+                        "reason": reason,  # 当前状态原因
+                        "ready": container.ready,  # 准备就绪
+
+                    })
+                data["containers_data"] = containers_data
+                result.append(data)
+            # 用来实现分页查询的类似offset标记
+            _continue = res.metadata._continue if res.metadata._continue else None
+            return result, _continue
+
+        except RequestError as e:
+            raise MyValidationError(message=f"请求链接错误:{e.__dict__}", code=10000)
+        except ApiException as e:
+            raise MyValidationError(message=e.body, code=10005)
+        except Exception as e:
+            raise MyValidationError(message=str(e), code=20000)
+
+    # 查看pod列表 必须带namespace
+    def list_pod_for_all_namespaces(self, limit=10, start=""):
+        kwargs = dict()
+        kwargs["limit"] = limit
+        if start:
+            kwargs["_continue"] = start
+        try:
+            res = self.core_v1_api.list_pod_for_all_namespaces(**kwargs)
+            result = []
+            for item in res.items:
+                data = dict()
+                data["name"] = item.metadata.name  # 名字
+                data["namespace"] = item.metadata.namespace  # 命名空间
+                data["creation_timestamp"] = item.metadata.creation_timestamp  # 创建时间
+                data["node_name"] = item.spec.node_name  # 节点名字
+                data["labels"] = item.metadata.labels  # 标签
+                data["images"] = [container.image for container in item.spec.containers]  # pod内的镜像
+                # 里面会有很多image 所以我做成一个list展示每个container的状态信息
+                containers_data = []
+                for container in item.status.container_statuses:
+                    status = ""
+                    reason = ""
+                    state_dict = container.state.to_dict()
+                    for key in state_dict.keys():
+                        if state_dict.get(key):
+                            status = key
+                            reason = state_dict.get(key)
+                    containers_data.append({
+                        "image": container.image,  # 镜像名字
+                        "restart_count": container.restart_count,  # 重启次数
+                        "status": status,  # 当前状态
+                        "reason": reason,  # 当前状态原因
+                        "ready": container.ready,  # 准备就绪
+
+                    })
+                data["containers_data"] = containers_data
+                result.append(data)
+            # 用来实现分页查询的类似offset标记
+            _continue = res.metadata._continue if res.metadata._continue else None
+            return result, _continue
+
+        except RequestError as e:
+            raise MyValidationError(message=f"请求链接错误:{e.__dict__}", code=10000)
+        except ApiException as e:
+            raise MyValidationError(message=e.body, code=10005)
+        except Exception as e:
+            raise MyValidationError(message=str(e), code=20000)
+
+    # 删除pod
+    def delete_namespaced_pod(self, name="", namespace=""):
+        try:
+            res = self.core_v1_api.delete_namespaced_pod(name, namespace)
+        except RequestError as e:
+            raise MyValidationError(message=f"请求链接错误:{e.__dict__}", code=10000)
+        except ApiException as e:
+            raise MyValidationError(message=e.body, code=10005)
+        except Exception as e:
+            raise MyValidationError(message=str(e), code=20000)
+        # 查看pod详情
+
+    def read_namespaced_pod(self):
+        pass
+
+    # 查看pod实时日志
+    def read_namespaced_pod_log(self):
+        pass
+
+    # 强制重启pod
+    def replace_namespaced_pod(self):
+        pass
+
+    # 交互进入pod
+    def connect_post_namespaced_pod_exec(self):
+        pass
+
+    # 获取pod下面的container信息
+    def list_containers_for_all_pod(self, limit=10, start="", namespace=""):
+        if not namespace:
+            raise MyValidationError(message="参数错误", code=10001)
+        kwargs = dict()
+        kwargs["limit"] = limit
+        if start:
+            kwargs["_continue"] = start
+        try:
+            res = self.core_v1_api.list_namespaced_pod(namespace, **kwargs)
+            result = []
+
+            for item in res.items:
+                for container in item.spec.containers:
+                    data = dict()
+                    data["name"] = container.name
+                    result.append(data)
+            # 用来实现分页查询的类似offset标记
+            _continue = res.metadata._continue if res.metadata._continue else None
+            return result, _continue
+
+        except RequestError as e:
+            raise MyValidationError(message=f"请求链接错误:{e.__dict__}", code=10000)
+        except ApiException as e:
+            raise MyValidationError(message=e.body, code=10005)
+        except Exception as e:
+            raise MyValidationError(message=str(e), code=20000)
+
+    # 获取当前pod资源的yaml
+    def get_yaml_for_pod(self, name="", namespace=""):
+        if not (namespace and name):
+            raise MyValidationError(message="参数错误", code=10001)
+        try:
+            res = self.core_v1_api.read_namespaced_pod(name, namespace)
+
+        except RequestError as e:
+            raise MyValidationError(message=f"请求链接错误:{e.__dict__}", code=10000)
+        except ApiException as e:
+            raise MyValidationError(message=e.body, code=10005)
+        except Exception as e:
+            raise MyValidationError(message=str(e), code=20000)
+
+        return yaml.safe_dump(res.to_dict())
+
+    # 获取当前deployment资源的yaml
+    def get_yaml_for_deployment(self, name="", namespace=""):
+        if not (namespace and name):
+            raise MyValidationError(message="参数错误", code=10001)
+        try:
+            res = self.apps_client.read_namespaced_deployment(name=name, namespace=namespace)
+
+        except RequestError as e:
+            raise MyValidationError(message=f"请求链接错误:{e.__dict__}", code=10000)
+        except ApiException as e:
+            raise MyValidationError(message=e.body, code=10005)
+        except Exception as e:
+            raise MyValidationError(message=str(e), code=20000)
+
+        return yaml.safe_dump(res.to_dict())
+
+    # 文件yaml方式部署资源对象
+    def apply_yaml(self, yaml_objects_list=None):
+        if not yaml_objects_list:
+            raise MyValidationError(message="yaml文件为空", code=10001)
+        try:
+            res = utils.create_from_yaml(self.api_client, yaml_objects=yaml_objects_list)
+
         except RequestError as e:
             raise MyValidationError(message=f"请求链接错误:{e.__dict__}", code=10000)
         except ApiException as e:

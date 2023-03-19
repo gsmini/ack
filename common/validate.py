@@ -11,7 +11,7 @@ class MyValidationError(APIException):
             detail = self.default_detail
         # 封装错误返回体
         data = {
-            'code': 600,
+            'code': code,
             'status': 'fail',
             'message': message,  # raise 的业务错误内容
             "detail": detail,
