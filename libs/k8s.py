@@ -121,6 +121,41 @@ class K8sClient:
         except Exception as e:
             raise MyValidationError(message=str(e), code=20000)
 
+    # 查看全部namespace下面的事件列表
+    def list_event_for_all_namespaces(self, limit=10, start=""):
+        """
+        :param limit: 没次请求返回的个数
+        :param start: 从上次请求的位置开始，类似mysql的offset功能
+        :return: 返回查询数据以及当次请求的截止位置标记_continue的值
+        """
+        kwargs = dict()
+        kwargs["limit"] = limit
+        if start:
+            kwargs["_continue"] = start
+
+        try:
+            res = self.core_v1_api.list_event_for_all_namespaces(**kwargs)
+            result = []
+            for item in res.items:
+                data = dict()
+                data["name"] = item.metadata.name  # 事件名字
+                data["reason"] = item.reason  # 发生原因
+                data["message"] = item.message  # 事件详情
+                data["source"] = str(item.source)  # 事件来源
+                data["count"] = item.count  # 发生次数
+                data["first_timestamp"] = item.first_timestamp  # 第一次发生时间
+                data["last_timestamp"] = item.last_timestamp  # 最后一次发生时间
+                result.append(data)
+            # 用来实现分页查询的类似offset标记
+            _continue = res.metadata._continue if res.metadata._continue else None
+            return result, _continue
+        except RequestError as e:
+            raise MyValidationError(message=f"请求链接错误:{e.__dict__}", code=10000)
+        except ApiException as e:
+            raise MyValidationError(message=e.body, code=10005)
+        except Exception as e:
+            raise MyValidationError(message=str(e), code=20000)
+
     # 查看某个namespace下面的事件列表
     def list_namespaced_event(self, limit=10, start="", namespace=""):
         """
@@ -173,6 +208,7 @@ class K8sClient:
                 for image in item.spec.template.spec.containers:
                     images.append({"image_name": image.image})
                 data["name"] = item.metadata.name
+                data["namespace"] = item.metadata.namespace
                 data["creation_timestamp"] = item.metadata.creation_timestamp
                 data["image"] = images
                 data["labels"] = item.metadata.labels
@@ -184,6 +220,86 @@ class K8sClient:
             # 用来实现分页查询的类似offset标记
             _continue = res.metadata._continue if res.metadata._continue else None
             return result, _continue
+        except RequestError as e:
+            raise MyValidationError(message=f"请求链接错误:{e.__dict__}", code=10000)
+        except ApiException as e:
+            raise MyValidationError(message=e.body, code=10005)
+        except Exception as e:
+            raise MyValidationError(message=str(e), code=20000)
+
+    def list_namespaced_deployment(self, limit=10, start="", namespace=""):
+        if not namespace:
+            raise MyValidationError(message="参数错误", code=10001)
+        kwargs = dict()
+        kwargs["limit"] = limit
+        if start:
+            kwargs["_continue"] = start
+        try:
+            res = self.apps_client.list_namespaced_deployment(namespace=namespace, **kwargs)
+            result = []
+            for item in res.items:
+                data = dict()
+                images = []  # 一个pod会有多个image
+                for image in item.spec.template.spec.containers:
+                    images.append({"image_name": image.image})
+                data["name"] = item.metadata.name
+                data["namespace"] = item.metadata.namespace
+                data["creation_timestamp"] = item.metadata.creation_timestamp
+                data["image"] = images
+                data["labels"] = item.metadata.labels
+                data["replicas"] = item.status.replicas
+                data["unavailable_replicas"] = item.status.unavailable_replicas if \
+                    item.status.unavailable_replicas else 0
+
+                result.append(data)
+            # 用来实现分页查询的类似offset标记
+            _continue = res.metadata._continue if res.metadata._continue else None
+            return result, _continue
+        except RequestError as e:
+            raise MyValidationError(message=f"请求链接错误:{e.__dict__}", code=10000)
+        except ApiException as e:
+            raise MyValidationError(message=e.body, code=10005)
+        except Exception as e:
+            raise MyValidationError(message=str(e), code=20000)
+
+    def read_deployment(self, name="", namespace=""):
+        if not (namespace and name):
+            raise MyValidationError(message="参数错误", code=10001)
+        try:
+            res = self.apps_client.read_namespaced_deployment(name=name, namespace=namespace)
+            data = dict()
+            pprint.pprint(res)
+
+            data["metadata"] = {
+                "name": res.metadata.name,
+                "namespace": res.metadata.namespace,
+                "uid": res.metadata.uid,
+                "creation_timestamp": res.metadata.creation_timestamp,
+                "labels": res.metadata.labels,
+                "annotations": res.metadata.annotations
+            }
+
+            data["spec"] = {
+                "replicas": res.spec.replicas,
+                "strategy": res.spec.strategy.to_dict(),
+                "selector": res.spec.selector.to_dict(),
+                "min_ready_seconds": res.spec.min_ready_seconds,  # 最小准备秒数
+                "revision_history_limit": res.spec.revision_history_limit  # 修改历史记录限制
+            }
+            # 滚动更新策略
+            data["rolling_update"] = {
+                "strategy": res.spec.strategy.to_dict(),  # 最大不可用
+            }
+            data["pods_status"] = {
+                "available_replicas": res.status.available_replicas,  # 可用的
+                "replicas": res.status.replicas,  # 总副本数
+                "unavailable_replicas": res.status.unavailable_replicas,  # 不可用副本数
+                "ready_replicas": res.status.ready_replicas  # 准备好的副本数
+            }
+            # 比如要转成dict才能序列化成json返回给前端
+            data["status"] = [condition.to_dict() for condition in res.status.conditions]
+
+            return data
         except RequestError as e:
             raise MyValidationError(message=f"请求链接错误:{e.__dict__}", code=10000)
         except ApiException as e:

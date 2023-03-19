@@ -18,7 +18,13 @@ class EventViewSet(mixins.CreateModelMixin,
         limit = int(self.request.query_params.get("limit", 10))
         start = self.request.query_params.get("start", "")
         namespace = self.request.query_params.get("namespace", "")
-        data, _continue = k8s_client.list_namespaced_event(limit, start, namespace)
-        resp['data'] = data
-        resp['_continue'] = _continue
+        if namespace:
+            data, _continue = k8s_client.list_namespaced_event(limit, start, namespace)
+            resp['data'] = data
+            resp['_continue'] = _continue
+        else:
+            data, _continue = k8s_client.list_event_for_all_namespaces(limit, start)
+            resp['data'] = data
+            resp['_continue'] = _continue
+
         return Response(resp)
