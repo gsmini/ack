@@ -28,14 +28,18 @@ def prefix_key(key, prefix=settings.ALIYUN_OSS_KEY_PREFIX):
     return key
 
 
-def _get_bucket(endpoint=settings.ALIYUN_OSS_ENDPOINT, bucket_name=settings.ALIYUN_OSS_BUCKET):
+def _get_bucket(
+    endpoint=settings.ALIYUN_OSS_ENDPOINT, bucket_name=settings.ALIYUN_OSS_BUCKET
+):
     auth = oss2.Auth(settings.ALIYUN_ACCESS_KEY_ID, settings.ALIYUN_ACCESS_KEY_SECRET)
     _bucket = oss2.Bucket(auth, endpoint, bucket_name)
     return _bucket
 
 
 class OSSStore:
-    def __init__(self, bucket, public_bucket, key_prefix=settings.ALIYUN_OSS_KEY_PREFIX):
+    def __init__(
+        self, bucket, public_bucket, key_prefix=settings.ALIYUN_OSS_KEY_PREFIX
+    ):
         self.bucket = bucket
         self.public_bucket = public_bucket
         self.key_prefix = key_prefix
@@ -92,7 +96,8 @@ def get_aliyun_oss():
     bucket = LocalProxy(_get_bucket)
     public_bucket = LocalProxy(
         lambda: _get_bucket(
-            endpoint=settings.ALIYUN_OSS_PUBLIC_ENDPOINT, bucket_name=settings.ALIYUN_OSS_BUCKET
+            endpoint=settings.ALIYUN_OSS_PUBLIC_ENDPOINT,
+            bucket_name=settings.ALIYUN_OSS_BUCKET,
         )
     )
     return LocalProxy(functools.partial(OSSStore, bucket, public_bucket))

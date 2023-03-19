@@ -21,9 +21,7 @@ def main():
     config.read(".bumpversion.cfg")
     version = config.get("bumpversion", "current_version")
     environment = "test" if DEBUG else "prod"
-    image_name_base = (
-        f"registry.cn-shenzhen.aliyuncs.com/gsmini/ack-{environment}"
-    )
+    image_name_base = f"registry.cn-shenzhen.aliyuncs.com/gsmini/ack-{environment}"
     image_version = f"{image_name_base}:{version}"
     image_latest = f"{image_name_base}:latest"
     call(f"docker build -t {image_version} .")

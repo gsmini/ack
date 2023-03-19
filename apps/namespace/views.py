@@ -10,10 +10,12 @@ from libs.k8s import k8s_client
 from common.response import MyResponse as Response
 
 
-class NameSpaceViewSet(mixins.ListModelMixin,
-                       mixins.RetrieveModelMixin,
-                       mixins.DestroyModelMixin,
-                       viewsets.GenericViewSet):
+class NameSpaceViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
+):
     authentication_classes = []
 
     permission_classes = []
@@ -23,8 +25,8 @@ class NameSpaceViewSet(mixins.ListModelMixin,
         limit = self.request.query_params.get("limit", "10")
         start = self.request.query_params.get("start", "")
         data, _continue = k8s_client.list_namespace(limit, start)
-        resp['data'] = data
-        resp['_continue'] = _continue
+        resp["data"] = data
+        resp["_continue"] = _continue
 
         return Response(resp)
 

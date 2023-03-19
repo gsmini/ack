@@ -4,8 +4,7 @@ from libs.k8s import k8s_client
 from common.response import MyResponse as Response
 
 
-class ContainerViewSet(mixins.ListModelMixin,
-                       viewsets.GenericViewSet):
+class ContainerViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     authentication_classes = []
     permission_classes = []
 
@@ -15,8 +14,10 @@ class ContainerViewSet(mixins.ListModelMixin,
         start = self.request.query_params.get("start", "")
         namespace = self.request.query_params.get("namespace", "")
 
-        data, _continue = k8s_client.list_containers_for_all_pod(limit, start, namespace)
-        resp['data'] = data
-        resp['_continue'] = _continue
+        data, _continue = k8s_client.list_containers_for_all_pod(
+            limit, start, namespace
+        )
+        resp["data"] = data
+        resp["_continue"] = _continue
 
         return Response(resp)

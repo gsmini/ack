@@ -2,4 +2,4 @@ from django.apps import AppConfig
 
 
 class AckyamlConfig(AppConfig):
-    name = 'apps.ackyaml'
+    name = "apps.ackyaml"

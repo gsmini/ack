@@ -6,8 +6,7 @@ from common.response import MyResponse as Response
 from .serializers import YamlCreateSerializer
 
 
-class PodYamlViewSet(mixins.ListModelMixin,
-                     viewsets.GenericViewSet):
+class PodYamlViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     authentication_classes = []
     permission_classes = []
 
@@ -18,8 +17,7 @@ class PodYamlViewSet(mixins.ListModelMixin,
         return Response(data)
 
 
-class DeploymentYamlViewSet(mixins.ListModelMixin,
-                            viewsets.GenericViewSet):
+class DeploymentYamlViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     authentication_classes = []
     permission_classes = []
 
@@ -32,15 +30,15 @@ class DeploymentYamlViewSet(mixins.ListModelMixin,
         return Response(data)
 
 
-class ApplyYamlViewSet(mixins.ListModelMixin,
-                       mixins.CreateModelMixin,
-                       viewsets.GenericViewSet):
+class ApplyYamlViewSet(
+    mixins.ListModelMixin, mixins.CreateModelMixin, viewsets.GenericViewSet
+):
     authentication_classes = []
     permission_classes = []
     serializer_class = YamlCreateSerializer
 
     def perform_create(self, serializer):
-        file_obj = serializer.validated_data.get('file')
+        file_obj = serializer.validated_data.get("file")
         context = file_obj.read()
         yaml_dict = yaml.load(context, Loader=yaml.FullLoader)
         k8s_client.apply_yaml([yaml_dict])

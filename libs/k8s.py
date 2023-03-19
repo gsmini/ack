@@ -19,7 +19,6 @@ from django.conf import settings
 
 
 class K8sClient:
-
     def __init__(self):
         config.load_kube_config(settings.KUBE_CONFIG)
         self.api_client = client.ApiClient()  # 底层的apiclient
@@ -32,7 +31,9 @@ class K8sClient:
         if not name:
             raise MyValidationError(message="参数错误", code=10001)
         try:
-            body = client.V1Namespace(kind="Namespace", api_version="v1", metadata={"name": name})
+            body = client.V1Namespace(
+                kind="Namespace", api_version="v1", metadata={"name": name}
+            )
             res = self.core_v1_api.create_namespace(body, pretty=True)
         except RequestError as e:
             raise MyValidationError(message="请求链接错误", code=10000)
@@ -213,8 +214,11 @@ class K8sClient:
                 data["image"] = images
                 data["labels"] = item.metadata.labels
                 data["replicas"] = item.status.replicas
-                data["unavailable_replicas"] = item.status.unavailable_replicas if \
-                    item.status.unavailable_replicas else 0
+                data["unavailable_replicas"] = (
+                    item.status.unavailable_replicas
+                    if item.status.unavailable_replicas
+                    else 0
+                )
 
                 result.append(data)
             # 用来实现分页查询的类似offset标记
@@ -235,7 +239,9 @@ class K8sClient:
         if start:
             kwargs["_continue"] = start
         try:
-            res = self.apps_client.list_namespaced_deployment(namespace=namespace, **kwargs)
+            res = self.apps_client.list_namespaced_deployment(
+                namespace=namespace, **kwargs
+            )
             result = []
             for item in res.items:
                 data = dict()
@@ -248,8 +254,11 @@ class K8sClient:
                 data["image"] = images
                 data["labels"] = item.metadata.labels
                 data["replicas"] = item.status.replicas
-                data["unavailable_replicas"] = item.status.unavailable_replicas if \
-                    item.status.unavailable_replicas else 0
+                data["unavailable_replicas"] = (
+                    item.status.unavailable_replicas
+                    if item.status.unavailable_replicas
+                    else 0
+                )
 
                 result.append(data)
             # 用来实现分页查询的类似offset标记
@@ -266,7 +275,9 @@ class K8sClient:
         if not (namespace and name):
             raise MyValidationError(message="参数错误", code=10001)
         try:
-            res = self.apps_client.read_namespaced_deployment(name=name, namespace=namespace)
+            res = self.apps_client.read_namespaced_deployment(
+                name=name, namespace=namespace
+            )
 
             data = dict()
 
@@ -276,7 +287,7 @@ class K8sClient:
                 "uid": res.metadata.uid,
                 "creation_timestamp": res.metadata.creation_timestamp,
                 "labels": res.metadata.labels,
-                "annotations": res.metadata.annotations
+                "annotations": res.metadata.annotations,
             }
 
             data["spec"] = {
@@ -284,7 +295,7 @@ class K8sClient:
                 "strategy": res.spec.strategy.to_dict(),
                 "selector": res.spec.selector.to_dict(),
                 "min_ready_seconds": res.spec.min_ready_seconds,  # 最小准备秒数
-                "revision_history_limit": res.spec.revision_history_limit  # 修改历史记录限制
+                "revision_history_limit": res.spec.revision_history_limit,  # 修改历史记录限制
             }
             # 滚动更新策略
             data["rolling_update"] = {
@@ -294,10 +305,12 @@ class K8sClient:
                 "available_replicas": res.status.available_replicas,  # 可用的
                 "replicas": res.status.replicas,  # 总副本数
                 "unavailable_replicas": res.status.unavailable_replicas,  # 不可用副本数
-                "ready_replicas": res.status.ready_replicas  # 准备好的副本数
+                "ready_replicas": res.status.ready_replicas,  # 准备好的副本数
             }
             # 比如要转成dict才能序列化成json返回给前端
-            data["status"] = [condition.to_dict() for condition in res.status.conditions]
+            data["status"] = [
+                condition.to_dict() for condition in res.status.conditions
+            ]
 
             return data
         except RequestError as e:
@@ -325,7 +338,9 @@ class K8sClient:
                 data["creation_timestamp"] = item.metadata.creation_timestamp  # 创建时间
                 data["node_name"] = item.spec.node_name  # 节点名字
                 data["labels"] = item.metadata.labels  # 标签
-                data["images"] = [container.image for container in item.spec.containers]  # pod内的镜像
+                data["images"] = [
+                    container.image for container in item.spec.containers
+                ]  # pod内的镜像
                 # 里面会有很多image 所以我做成一个list展示每个container的状态信息
                 containers_data = []
                 for container in item.status.container_statuses:
@@ -336,14 +351,15 @@ class K8sClient:
                         if state_dict.get(key):
                             status = key
                             reason = state_dict.get(key)
-                    containers_data.append({
-                        "image": container.image,  # 镜像名字
-                        "restart_count": container.restart_count,  # 重启次数
-                        "status": status,  # 当前状态
-                        "reason": reason,  # 当前状态原因
-                        "ready": container.ready,  # 准备就绪
-
-                    })
+                    containers_data.append(
+                        {
+                            "image": container.image,  # 镜像名字
+                            "restart_count": container.restart_count,  # 重启次数
+                            "status": status,  # 当前状态
+                            "reason": reason,  # 当前状态原因
+                            "ready": container.ready,  # 准备就绪
+                        }
+                    )
                 data["containers_data"] = containers_data
                 result.append(data)
             # 用来实现分页查询的类似offset标记
@@ -373,7 +389,9 @@ class K8sClient:
                 data["creation_timestamp"] = item.metadata.creation_timestamp  # 创建时间
                 data["node_name"] = item.spec.node_name  # 节点名字
                 data["labels"] = item.metadata.labels  # 标签
-                data["images"] = [container.image for container in item.spec.containers]  # pod内的镜像
+                data["images"] = [
+                    container.image for container in item.spec.containers
+                ]  # pod内的镜像
                 # 里面会有很多image 所以我做成一个list展示每个container的状态信息
                 containers_data = []
                 for container in item.status.container_statuses:
@@ -384,14 +402,15 @@ class K8sClient:
                         if state_dict.get(key):
                             status = key
                             reason = state_dict.get(key)
-                    containers_data.append({
-                        "image": container.image,  # 镜像名字
-                        "restart_count": container.restart_count,  # 重启次数
-                        "status": status,  # 当前状态
-                        "reason": reason,  # 当前状态原因
-                        "ready": container.ready,  # 准备就绪
-
-                    })
+                    containers_data.append(
+                        {
+                            "image": container.image,  # 镜像名字
+                            "restart_count": container.restart_count,  # 重启次数
+                            "status": status,  # 当前状态
+                            "reason": reason,  # 当前状态原因
+                            "ready": container.ready,  # 准备就绪
+                        }
+                    )
                 data["containers_data"] = containers_data
                 result.append(data)
             # 用来实现分页查询的类似offset标记
@@ -481,7 +500,9 @@ class K8sClient:
         if not (namespace and name):
             raise MyValidationError(message="参数错误", code=10001)
         try:
-            res = self.apps_client.read_namespaced_deployment(name=name, namespace=namespace)
+            res = self.apps_client.read_namespaced_deployment(
+                name=name, namespace=namespace
+            )
 
         except RequestError as e:
             raise MyValidationError(message=f"请求链接错误:{e.__dict__}", code=10000)
@@ -497,7 +518,9 @@ class K8sClient:
         if not yaml_objects_list:
             raise MyValidationError(message="yaml文件为空", code=10001)
         try:
-            res = utils.create_from_yaml(self.api_client, yaml_objects=yaml_objects_list)
+            res = utils.create_from_yaml(
+                self.api_client, yaml_objects=yaml_objects_list
+            )
 
         except RequestError as e:
             raise MyValidationError(message=f"请求链接错误:{e.__dict__}", code=10000)
